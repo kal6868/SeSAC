@@ -1,0 +1,117 @@
+import os
+import json
+import re
+from bs4 import BeautifulSoup
+import sys
+from tqdm.notebook import tqdm
+import pandas as pd
+from tqdm.notebook import tqdm
+
+path = r'.\study\dataset\korsquad\train'
+name = '\korquad2.1_train_00.json'
+def mk_dataset(file):
+    final_data = []
+    with open(file, 'r') as js:
+        jsdata = json.load(js)
+
+    for i in range(len(jsdata['data'])):
+        soup = BeautifulSoup(jsdata['data'][i]['context'], 'lxml')
+        #table
+        #table_area = re.split('<h2>목차</h2>', str(soup))[0]
+        #try :
+        #    table = BeautifulSoup(table_area).select_one('div>table').text
+        #except AttributeError:
+        #    table = ''
+
+        title = jsdata['data'][i]['title']
+
+        # 목차 이전
+        try:
+            head = soup.select('div>div>p')[0].text
+        except IndexError:
+            head = ''
+        # 각주냐 외부링크냐
+        # 각주 ~ 각주/ 외부링크 ~ 외부링크
+        split_by_index = soup.select('li>a>span')
+        key_word = []
+        for s_i, word in enumerate(split_by_index):
+            if s_i % 2 == 0:
+                pass
+            elif s_i % 2 != 0:
+                key_word.append(word.text)
+        try :
+            if '각주' in key_word:
+                sp_key2 = '<span>각주</span>'
+            else:
+                sp_key2 = '<span>' + str(key_word[-1]) + '</span>'
+        except IndexError:
+            continue
+
+        try:
+            list_text = re.split(str(sp_key2), str(soup))[1]
+        except IndexError:
+            continue
+        except re.error:
+            continue
+
+        body = BeautifulSoup(list_text, 'html.parser').text
+        #text = table+head+body
+        text = head + body
+
+        text = re.sub('\n', ' ', text)
+        text = re.sub('이 문서의 내용은 출처가 분명하지 않습니다.이 문서를 편집하여 신뢰할 수 있는 출처를 표기해 주세요. 검증되지 않은 내용은 삭제될 수도 있습니다. 내용에 대한 의견은 토론 문서에서 나누어 주세요. \w{4}년 \w{1,2}월', '', text)
+        text = re.sub('이 문서의 일부는 오래된 정보를 가지고 있어 최신 정보로 교체하여야 합니다. 검토 후 최신 사건이 반영되도록 문서를 수정해 주세요. \w{4}년 \w{1,2}월', '', text)
+        text = re.sub('이 문서의 내용은 출처가 분명하지 않습니다.이 문서를 편집하여 신뢰할 수 있는 출처를 표기해 주세요. 검증되지 않은 내용은 삭제될 수도 있습니다. 내용에 대한 의견은 토론 문서에서 나누어 주세요.', '', text)
+        text = re.sub('이 문서의 일부는 오래된 정보를 가지고 있어 최신 정보로 교체하여야 합니다. 검토 후 최신 사건이 반영되도록 문서를 수정해 주세요. \w{4}년 \w{1,2}월', '',  text)
+        text = re.sub('이 문서는 방송이 계획되었거나 아직 종영되지 않은 프로그램에 관한 정보를 담고 있습니다. 내용에 대한 의견이 있으시다면 토론 문서에서 나누어 주세요.정확한 내용을 반영할있도록 문서 수정을 도와주세요.', '', text)
+        text = re.sub('이 문서는 미공개 또는 계획만 발표되었거나, 현재 진행 중인 작품의 내용을 포함하고 있습니다. 내용에 대한 의견이 있으시다면 토론 문서에서 나누어 주세요.정확한 내용을 반영할있도록 문서 수정을 도와주세요.', '', text)
+        text = re.sub('이 문서는 영어 위키백과의 문서를 번역하여 문서의 내용을 확장할 필요가 있습니다.신뢰성 있고 확인할있는 출처가 제시되도록 번역하여 주십시오. 번역을 완료한 후에는 번역된 문서 틀을 토론창에 표기하여 저작자를 표시하여 주십시오. 문맥상 이해를 돕기 위해 관련 문서를 같이 번역해주시는 것이 좋습니다. 번역을 확장할 필요가 있는 다른 문서를 보고 싶으시다면 분류:번역 확장 필요 문서를 참고해주세요.', '', text)
+        text = re.sub('이 문서는 계획되었거나 진행 중인 야구 행사와 관련된 내용을 담고 있습니다. 내용에 대한 의견이 있으시다면 토론 문서에서 나누어 주세요.정확한 내용을 반영할있도록 문서 수정을 도와주세요.', '', text)
+        text = re.sub('이 문서는 자연스럽지 않게 번역되었으며, 기계 번역에 의해 작성되었을 수도 있습니다.자연스럽지 않은 문장을 한국어 어법에 맞게 고쳐 주세요.', '', text)
+        text = re.sub('이 문서는 아직 개통되지 않은 철도 노선 또는 철도역의 정보를 포함하고 있습니다. 내용에 대한 의견이 있으시다면 토론 문서에서 나누어 주세요.정확한 내용을 반영할있도록 문서 수정을 도와주세요.', '', text)
+        text = re.sub('이 문서에는 다음커뮤니케이션에서 또는 - 라이선스로 배포한 글로벌 세계대백과사전의 내용을 기초로 작성된 글이 포함되어 있습니다.', '', text)
+        text = re.sub('전문 한국어 위키문헌에 이 글과 관련된 원문이 있습니다.', '', text)
+        text = re.sub('[\\xa0]', ' ', text)
+        text = re.sub('\d?\s외부\s링크', '', text)
+        text = re.sub('\d?\s참고\s문헌', '', text)
+        text = re.sub('\d?\s참고\s자료', '', text)
+        text = re.sub('\d?\s줄기\s참고', '', text)
+        text = re.sub('[\[]\w*[\]]', ' ', text)
+        text = re.sub('[《》<>〈〉~]', ' ', text)
+        text = re.sub('\([^)]*\)', '', text)
+        text = re.sub('[^가-힣a-zA-Z0-9.,:?!°\-/\'\"]', ' ', text)
+        text = re.sub('\s{2,}', ' ', text)
+        text = re.split('같이 보기', text)[0]
+        text = text.strip()
+
+        question = jsdata['data'][i]['qas'][0]['question']
+        question = BeautifulSoup(question, 'html.parser').text
+        question = re.sub('\n', ' ', question)
+        question = re.sub('[\\xa0]', ' ', question)
+        question = re.sub('\d\s외부\s링크', '', question)
+        question = re.sub('[《》<>〈〉~]', ' ', question)
+        question = re.sub('\([^)]*\)', '', question)
+        question = re.sub('[^가-힣a-zA-Z0-9.,:?!°\-/\'\"]', ' ', question)
+        question = re.sub('\s{2,}', ' ', question)
+        question = question.strip()
+
+        answer = jsdata['data'][i]['qas'][0]['answer']['text']
+        answer = BeautifulSoup(answer, 'html.parser').text
+        answer = re.sub('\n', ' ', answer)
+        answer = re.sub('[\\xa0]', ' ', answer)
+        answer = re.sub('\d\s외부\s링크', '', answer)
+        answer = re.sub('[《》<>〈〉~]', ' ', answer)
+        answer = re.sub('\([^)]*\)', '', answer)
+        answer = re.sub('[^가-힣a-zA-Z0-9.,:?!°\-/\'\"]', ' ', answer)
+        answer = re.sub('\s{2,}', ' ', answer)
+        answer = answer.strip()
+
+        final_data.append([title, text, question, answer])
+    return final_data
+   
+    dirlist = [files for files in os.listdir(path) if files.endswith(".json")]
+    os.makedirs(os.path.join(path, 'dataframe'), exist_ok = True)
+    for filename in dirlist:
+        data_table = mk_dataset(path + '/' + filename)
+        data_table_p = pd.DataFrame(data_table)
+        data_table_p.to_excel(os.path.join(path, 'dataframe', filename[0:-5] + '.xlsx'), encoding='utf-8-sig')
