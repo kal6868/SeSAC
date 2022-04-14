@@ -11,7 +11,9 @@ from ratsnlp.nlpbook.qa import QATrainArguments
 args = QATrainArguments(
     pretrained_model_name="beomi/kcbert-base",
     downstream_corpus_name="korquad-v1",
-    downstream_model_dir="C:/Users/workspace/PycharmProjects/study/model",
+    
+    #절대경로 사용 불가
+    downstream_model_dir="",
     max_seq_length=128,
     max_query_length=32,
     doc_stride=64,
@@ -78,8 +80,9 @@ model = BertForQuestionAnswering.from_pretrained(
 task = QATask(model, args)
 trainer = nlpbook.get_trainer(args)
 
-#trainer.fit(
-#    task,
-#    train_dataloader=train_dataloader,
-#    val_dataloaders=val_dataloader
-#)
+#epoch 당 약 1
+trainer.fit(
+    task,
+    train_dataloader=train_dataloader,
+    val_dataloaders=val_dataloader
+)
